@@ -31,6 +31,27 @@
 /* Own header */
 #include "app.h"
 
+#include "log.h"
+#include "src/display.h"
+#include "button.h"
+#include "events.h"
+
+#define SOFT_TIMER_1_SEC (32768)
+#define FACTORY_RESET_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
+
+#define NAME_LENGTH (13)
+#if DEVICE_IS_ONOFF_PUBLISHER
+#define NAME_PREFIX "5823Pub"
+#define DEVICE_TYPE "Publisher"
+#else
+#define NAME_PREFIX "5823Sub"
+#define DEVICE_TYPE "Subscriber"
+#endif
+
+#define ADDR_LENGTH (6) // length of address is 6
+#define STR_BYTES_PER_ADDRESS_BYTE (3) // we need 3 bytes per each address byte (2 to store the hex value in string form + 1 for a colon)
+#define ADDR_BUFFER_LENGTH (18) // ADDR_LENGTH * STR_BYTES_PER_ADDRESS_BYTE
+
 /// Flag for indicating DFU Reset must be performed
 static uint8_t boot_to_dfu = 0;
 
@@ -137,8 +158,53 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
   switch (evt_id) {
     case gecko_evt_system_boot_id:
-    	gecko_cmd_mesh_node_init();
+    	logInit();
+    	displayInit();
+    	button_init();
+
+    	// check if a button is pressed. If so, do a factory reset!
+    	if (button_get_pushbutton_state(PB0) || button_get_pushbutton_state(PB1))
+    	{
+    		displayPrintf(DISPLAY_ROW_ACTION, "Factory Reset");
+    		LOG_INFO("Factory reset!");
+    		gecko_cmd_flash_ps_erase_all();
+
+    		// set a timer for 2 seconds
+    		gecko_cmd_hardware_set_soft_timer(FACTORY_RESET_TIMEOUT, 0, true);
+    	}
+    	else // regular boot up
+    	{
+    		struct gecko_msg_system_get_bt_address_rsp_t* rsp = gecko_cmd_system_get_bt_address();
+    		char name[NAME_LENGTH] = {}; // initialize to all zeros
+    		sprintf(name, "%s %02X%02X", NAME_PREFIX, rsp->address.addr[0], rsp->address.addr[1]);
+    		LOG_DEBUG("Device name: %s", name);
+
+    		displayPrintf(DISPLAY_ROW_NAME, DEVICE_TYPE);
+
+    		uint8_t addr_buf[ADDR_BUFFER_LENGTH] = {}; // Initialize to all 0s
+
+    		// convert the raw addresses into printable strings
+    		for (uint8_t i = 0; i < ADDR_LENGTH; i++)
+    		{
+    			sprintf((void*)&addr_buf[i*STR_BYTES_PER_ADDRESS_BYTE], "%02X:", rsp->address.addr[i]);
+    		}
+    		// make sure the string is null terminated
+    		addr_buf[ADDR_BUFFER_LENGTH - 1] = 0x00;
+
+    		// print the address of the client and server to the display
+    		displayPrintf(DISPLAY_ROW_BTADDR, "%s", addr_buf);
+
+    		gecko_cmd_gatt_server_write_attribute_value(gattdb_device_name, 0, NAME_LENGTH, name);
+    		gecko_cmd_mesh_node_init();
+
+    	}
       break;
+
+    case gecko_evt_hardware_soft_timer_id:
+    	LOG_DEBUG("Timer %d event", evt->data.evt_hardware_soft_timer.handle);
+    	// reset!
+    	gecko_cmd_system_reset(0);
+    	break;
 
     case gecko_evt_mesh_node_initialized_id:
       if(!evt->data.evt_mesh_node_initialized.provisioned)
@@ -152,6 +218,16 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
         gecko_cmd_system_reset(2);
       }
       break;
+
+    case gecko_evt_system_external_signal_id:
+    	events_update_bitmask(evt->data.evt_system_external_signal.extsignals);
+    	// If a button press has occurred, handle it!
+    	if (events_get_event(EVENT_PB0_PRESS))
+    	{
+    		events_clear_event(EVENT_PB0_PRESS);
+    		LOG_DEBUG("Button press");
+    	}
+    	break;
 
     case gecko_evt_gatt_server_user_write_request_id:
       if (evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_ota_control) {
