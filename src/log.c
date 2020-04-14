@@ -9,6 +9,7 @@
 #include "log.h"
 #include <stdbool.h>
 //#include "timer.h"
+#include "sl_sleeptimer.h"
 
 #if INCLUDE_LOGGING
 /**
@@ -17,7 +18,10 @@
  */
 uint32_t loggerGetTimestamp(void)
 {
-	return 0;
+	uint64_t ms;
+	uint64_t ticks = sl_sleeptimer_get_tick_count64();
+	sl_sleeptimer_tick64_to_ms(ticks, &ms);
+	return ms;
 }
 
 /**

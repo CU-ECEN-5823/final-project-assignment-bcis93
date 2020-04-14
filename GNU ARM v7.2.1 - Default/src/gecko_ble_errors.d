@@ -1,5 +1,5 @@
-app.o: ../app.c \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_types.h \
+src/gecko_ble_errors.o: ../src/gecko_ble_errors.c \
+ ../src/gecko_ble_errors.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\soc/native_gecko.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93/hal-config.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93/board_features.h \
@@ -63,28 +63,14 @@ app.o: ../app.c \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\emlib\inc/em_bus.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\emlib\inc/em_assert.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93/hal-config-app-common.h \
+ C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_types.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/gecko_configuration.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_types.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_errorcodes.h \
- ../gatt_db.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc/mesh_generic_model_capi_types.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc/mesh_lib.h \
- ../app.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/log.h \
- ../src/display.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib\glib/glib.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib\glib/glib_color.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib/dmd/dmd.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib/em_types.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/button.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/events.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/ble_mesh_device_type.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/gecko_ble_errors.h \
- C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/log.h
+ ../src/log.h
 
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_types.h:
+../src/gecko_ble_errors.h:
 
 C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\soc/native_gecko.h:
 
@@ -212,6 +198,8 @@ C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\emlib\
 
 C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93/hal-config-app-common.h:
 
+C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_types.h:
+
 C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/gecko_configuration.h:
 
 C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h:
@@ -220,34 +208,4 @@ C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\blueto
 
 C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_errorcodes.h:
 
-../gatt_db.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc/mesh_generic_model_capi_types.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\protocol\bluetooth\bt_mesh\inc/mesh_lib.h:
-
-../app.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/log.h:
-
-../src/display.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib\glib/glib.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib\glib/glib_color.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib/dmd/dmd.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\middleware\glib/em_types.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/button.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/events.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/ble_mesh_device_type.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/gecko_ble_errors.h:
-
-C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\src/log.h:
+../src/log.h:

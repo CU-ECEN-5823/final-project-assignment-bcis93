@@ -63,7 +63,10 @@ src/log.o: ../src/log.c \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\emlib\inc/em_bus.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\emlib\inc/em_assert.h \
  C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93/hal-config-app-common.h \
- ../src/log.h
+ ../src/log.h \
+ C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\service\sleeptimer\inc/sl_sleeptimer.h \
+ C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\service\sleeptimer\config/sl_sleeptimer_config.h \
+ C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\common\inc/sl_status.h
 
 C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\hardware\kit\common\drivers/retargetserial.h:
 
@@ -194,3 +197,9 @@ C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\emlib\
 C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93/hal-config-app-common.h:
 
 ../src/log.h:
+
+C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\service\sleeptimer\inc/sl_sleeptimer.h:
+
+C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\service\sleeptimer\config/sl_sleeptimer_config.h:
+
+C:\Users\Bryan\SimplicityStudio\v4_workspace\assignment10-bcis93\platform\common\inc/sl_status.h:

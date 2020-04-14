@@ -22,8 +22,18 @@ static void button_interrupt_callback(uint8_t pin)
 {
 	if (pin == BSP_BUTTON0_PIN)
 	{
-		// The button was pressed! Set an event for the main loop to handle
-		events_set_event(EVENT_PB0_PRESS);
+		button_pressed = !GPIO_PinInGet(BSP_BUTTON0_PORT, BSP_BUTTON0_PIN);
+		if (button_pressed)
+		{
+			// The button was pressed! Set an event for the main loop to handle
+			events_set_event(EVENT_PB0_PRESS);
+		}
+		else
+		{
+			// button was released! set release event
+			events_set_event(EVENT_PB0_RELEASE);
+		}
+
 	}
 	else
 	{
@@ -38,8 +48,8 @@ void button_init(void)
 	GPIO_PinModeSet(BSP_BUTTON0_PORT, BSP_BUTTON0_PIN, gpioModeInputPullFilter, 1);
 	GPIO_PinModeSet(BSP_BUTTON0_PORT, BSP_BUTTON1_PIN, gpioModeInputPullFilter, 1);
 
-	// Set an interrupt for the rising edge of the PB0 and set the callback function
-	GPIO_ExtIntConfig(BSP_BUTTON0_PORT, BSP_BUTTON0_PIN, BSP_BUTTON0_PIN, true, false, true);
+	// Set an interrupt for the rising and falling edge of the PB0 and set the callback function
+	GPIO_ExtIntConfig(BSP_BUTTON0_PORT, BSP_BUTTON0_PIN, BSP_BUTTON0_PIN, true, true, true);
 	GPIOINT_CallbackRegister(BSP_BUTTON0_PIN, button_interrupt_callback);
 }
 

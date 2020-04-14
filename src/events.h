@@ -19,6 +19,7 @@
 #define EVENT_TIMER_WAIT_DONE		(1 << 1)
 #define EVENT_I2C_COMPLETE			(1 << 2)
 #define EVENT_PB0_PRESS				(1 << 3)
+#define EVENT_PB0_RELEASE			(1 << 4)
 
 /**
  * Safely set an event
