@@ -617,7 +617,11 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
     		// print the address of the client and server to the display
     		displayPrintf(DISPLAY_ROW_BTADDR, "%s", addr_buf);
 
-    		gecko_cmd_gatt_server_write_attribute_value(gattdb_device_name, 0, NAME_LENGTH, name);
+    		struct gecko_msg_gatt_server_write_attribute_value_rsp_t* response = gecko_cmd_gatt_server_write_attribute_value(gattdb_device_name, 0, NAME_LENGTH, name);
+    		if (response->result)
+    		{
+    			LOG_WARN("write attribute failed with 0x%X", response->result);
+    		}
     		BTSTACK_CHECK_RESPONSE(
     				gecko_cmd_mesh_node_init());
 
