@@ -48,6 +48,8 @@
 #include "events.h"
 #include "ble_mesh_device_type.h"
 #include "gecko_ble_errors.h"
+#include "timer.h"
+#include "VEML6075.h"
 
 #define SOFT_TIMER_1_SEC (32768)
 #define FACTORY_RESET_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
@@ -64,6 +66,7 @@
 #define ADDR_LENGTH (6) // length of address is 6
 #define STR_BYTES_PER_ADDRESS_BYTE (3) // we need 3 bytes per each address byte (2 to store the hex value in string form + 1 for a colon)
 #define ADDR_BUFFER_LENGTH (18) // ADDR_LENGTH * STR_BYTES_PER_ADDRESS_BYTE
+#define DISPLAY_MAX_COUNT (4)
 
 /// Flag for indicating DFU Reset must be performed
 static uint8_t boot_to_dfu = 0;
@@ -72,6 +75,8 @@ static uint16_t _primary_elem_index = 0; /* For indexing elements of the node */
 
 /// on/off transaction identifier
 static uint8_t onoff_trid = 0;
+
+static uint8_t display_count = 0;
 
 /***********************************************************************************************//**
  * @addtogroup Application
@@ -456,7 +461,13 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 	case gecko_evt_system_boot_id:
 		logInit();
 		displayInit();
+		display_count = DISPLAY_MAX_COUNT;
 		button_init();
+		timer_initialize();
+		i2c_init();
+		veml6075_init();
+		//veml6075_begin(VEML6075_100MS, false, true);
+		veml6075_enable(true);
 
 		// check if a button is pressed. If so, do a factory reset!
 		if (button_get_pushbutton_state(PB0) || button_get_pushbutton_state(PB1))
@@ -638,64 +649,91 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			events_clear_event(EVENT_PB0_PRESS);
 			LOG_DEBUG("Button pressed");
 
-			if (DeviceIsOnOffPublisher())
-			{
-				struct mesh_generic_request req;
-				const uint32_t transtime = 0; // using zero transition time by default
-
-				req.kind = mesh_generic_request_on_off;
-				req.on_off = MESH_GENERIC_ON_OFF_STATE_ON;
-
-
-				LOG_DEBUG("Publishing button state (on)");
-				errorcode_t err = mesh_lib_generic_client_publish(
-						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
-						_primary_elem_index,
-						onoff_trid,
-						&req,
-						transtime, // transition time in ms
-						50,
-						0x00   // flags
-				);
-				if (err)
-				{
-					LOG_WARN("client publish failed with 0x%X", err);
-				}
-
-				onoff_trid++;
-			}
+//			if (DeviceIsOnOffPublisher())
+//			{
+//				struct mesh_generic_request req;
+//				const uint32_t transtime = 0; // using zero transition time by default
+//
+//				req.kind = mesh_generic_request_on_off;
+//				req.on_off = MESH_GENERIC_ON_OFF_STATE_ON;
+//
+//
+//				LOG_DEBUG("Publishing button state (on)");
+//				errorcode_t err = mesh_lib_generic_client_publish(
+//						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
+//						_primary_elem_index,
+//						onoff_trid,
+//						&req,
+//						transtime, // transition time in ms
+//						50,
+//						0x00   // flags
+//				);
+//				if (err)
+//				{
+//					LOG_WARN("client publish failed with 0x%X", err);
+//				}
+//
+//				onoff_trid++;
+//			}
 		}
 		if (events_get_event(EVENT_PB0_RELEASE))
 		{
 			events_clear_event(EVENT_PB0_RELEASE);
 			LOG_DEBUG("Button released");
 
-			if (DeviceIsOnOffPublisher())
+//			if (DeviceIsOnOffPublisher())
+//			{
+//				struct mesh_generic_request req;
+//				const uint32_t transtime = 0; // using zero transition time by default
+//
+//				req.kind = mesh_generic_request_on_off;
+//				req.on_off = MESH_GENERIC_ON_OFF_STATE_OFF;
+//
+//
+//				LOG_DEBUG("Publishing button state (off)");
+//				errorcode_t err = mesh_lib_generic_client_publish(
+//						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
+//						_primary_elem_index,
+//						onoff_trid,
+//						&req,
+//						transtime, // transition time in ms
+//						50,
+//						0x00   // flags
+//				);
+//				if (err)
+//				{
+//					LOG_WARN("client publish failed with 0x%X", err);
+//				}
+//
+//				onoff_trid++;
+//			}
+			if (!displayEnabled())
 			{
-				struct mesh_generic_request req;
-				const uint32_t transtime = 0; // using zero transition time by default
-
-				req.kind = mesh_generic_request_on_off;
-				req.on_off = MESH_GENERIC_ON_OFF_STATE_OFF;
-
-
-				LOG_DEBUG("Publishing button state (off)");
-				errorcode_t err = mesh_lib_generic_client_publish(
-						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
-						_primary_elem_index,
-						onoff_trid,
-						&req,
-						transtime, // transition time in ms
-						50,
-						0x00   // flags
-				);
-				if (err)
-				{
-					LOG_WARN("client publish failed with 0x%X", err);
-				}
-
-				onoff_trid++;
+				displayInit();
 			}
+			display_count = DISPLAY_MAX_COUNT;
+		}
+
+		if (events_get_event(EVENT_TIMER_PERIOD_EXPIRED))
+		{
+			if (display_count > 0)
+			{
+				display_count--;
+				if (display_count == 0)
+				{
+					LOG_INFO("Turning off display");
+					displayDeinit();
+				}
+			}
+			if (displayEnabled())
+			{
+				displayUpdate();
+			}
+		}
+
+		if (events_get_events())
+		{
+			veml6075_run();
 		}
 		break;
 

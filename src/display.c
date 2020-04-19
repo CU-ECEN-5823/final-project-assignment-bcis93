@@ -59,6 +59,8 @@ struct display_data {
  */
 static struct display_data global_display_data;
 
+static bool display_enabled = false;
+
 static struct display_data *displayGetData() {
 	return &global_display_data;
 }
@@ -196,6 +198,7 @@ void displayInit()
 	for( row = DISPLAY_ROW_NAME; row < DISPLAY_ROW_MAX; row++ ) {
 		displayPrintf(row,"%s"," ");
 	}
+	display_enabled = true;
 #if SCHEDULER_SUPPORTS_DISPLAY_UPDATE_EVENT
 #if TIMER_SUPPORTS_1HZ_TIMER_EVENT
 	// Nothing needed here to set up the timer for 1Hz
@@ -205,6 +208,17 @@ void displayInit()
 #else
 #warning "Display Update event is not implemented in scheduler.  Please implement for display support"
 #endif
+}
+
+void displayDeinit(void)
+{
+	gpioDisableDisplay();
+	display_enabled = false;
+}
+
+bool displayEnabled(void)
+{
+	return display_enabled;
 }
 
 /**

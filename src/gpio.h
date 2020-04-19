@@ -43,6 +43,11 @@ void gpioLed1SetOff();
 void gpioEnableDisplay(void);
 
 /**
+ * Disable the GPIO pin needed for the display
+ */
+void gpioDisableDisplay(void);
+
+/**
  * Set the EXTCOMIN pin high or low, depending on the bool input
  */
 void gpioSetDisplayExtcomin(bool high);

@@ -8,17 +8,14 @@
 #ifndef SRC_TIMER_H_
 #define SRC_TIMER_H_
 
-#include "sleep.h"
+#include <stdint.h>
 
 #define TIMER_SUPPORTS_1HZ_TIMER_EVENT	1
 
 /*
  * Initialize and start the timer.
- *
- * Pass in the energy mode used to set up the sleep block so
- * that the timer can decide which oscillator to use.
  */
-void timer_initialize(SLEEP_EnergyMode_t sleep_blocked);
+void timer_initialize();
 
 /**
  * Wait for ms_wait amount of time

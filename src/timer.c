@@ -37,22 +37,13 @@
 static uint32_t frequency = LFXO_FREQUENCY_8K;
 static uint32_t overflow_count = 0;
 
-void timer_initialize(SLEEP_EnergyMode_t sleep_blocked)
+void timer_initialize()
 {
 	// Default to using the LFXO
 	CMU_Osc_TypeDef osc = cmuOsc_LFXO;
 	CMU_Select_TypeDef clock = cmuSelect_LFXO;
 	CMU_ClkDiv_TypeDef div = LFXO_8K_PRESCALER;
 	frequency = LFXO_FREQUENCY_8K;
-
-	if (sleep_blocked == sleepEM4)
-	{
-		// If we're running in EM3, use the ULFRCO and its associated values
-		osc = cmuOsc_ULFRCO;
-		clock = cmuSelect_ULFRCO;
-		div = ULFRCO_PRESCALER;
-		frequency = ULFRCO_FREQUENCY_1K;
-	}
 
 	// Enable oscillator
 	CMU_OscillatorEnable(osc, true, true);
@@ -87,6 +78,7 @@ void timer_initialize(SLEEP_EnergyMode_t sleep_blocked)
 
 	// Start the timer!
 	LETIMER_Enable(LETIMER0, true);
+	LOG_INFO("Timer started!");
 }
 
 static uint32_t ms_to_ticks(uint32_t ms_wait)

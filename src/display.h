@@ -52,8 +52,10 @@ enum display_row {
 
 #if ECEN5823_INCLUDE_DISPLAY_SUPPORT
 void displayInit();
+void displayDeinit(void);
 bool displayUpdate();
 void displayPrintf(enum display_row row, const char *format, ... );
+bool displayEnabled(void);
 #else
 static inline void displayInit() { }
 static inline bool displayUpdate() { return true; }

@@ -25,7 +25,7 @@
 #define DEVICE_IS_ONOFF_SUBSCRIBER			1
 #endif
 
-#define DEVICE_IS_BLE_MESH_LPN 				0
+#define DEVICE_IS_BLE_MESH_LPN 				1
 #define DEVICE_IS_BLE_MESH_FRIEND 			0
 
 

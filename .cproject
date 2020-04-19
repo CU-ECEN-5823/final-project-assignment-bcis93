@@ -181,6 +181,7 @@
 								<option id="gnu.c.link.option.libs.110831489" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="m"/>
 								</option>
+								<option id="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.linker.printffloat.375788258" superClass="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.linker.printffloat" value="true" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1967028428" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -220,5 +221,9 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="GNU ARM v7.2.1 - Default">
+			<resource resourceType="PROJECT" workspacePath="/ble_mesh_uv_light"/>
+		</configuration>
+	</storageModule>
 </cproject>

@@ -54,6 +54,11 @@ void gpioEnableDisplay(void)
 	GPIO_PinOutSet(DISPLAY_GPIO_PORT, DISPLAY_GPIO_ENABLE_PIN);
 }
 
+void gpioDisableDisplay(void)
+{
+	GPIO_PinModeSet(DISPLAY_GPIO_PORT, DISPLAY_GPIO_ENABLE_PIN, gpioModeDisabled, true);
+}
+
 void gpioSetDisplayExtcomin(bool high)
 {
 	if (high)
