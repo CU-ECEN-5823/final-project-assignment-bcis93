@@ -119,29 +119,32 @@ static void displayUpdateWriteBuffer(struct display_data *display)
 
 void displayPrintf(enum display_row row, const char *format, ... )
 {
-	struct display_data *display = displayGetData();
-	if( row >= DISPLAY_ROW_MAX ) {
-		LOG_WARN("Row %d exceeded max row, ignoring write request",row);
-	} else {
-		va_list args;
-		va_start (args, format);
-		int chars_written = vsnprintf(&display->row_data[row][0],DISPLAY_ROW_LEN,format,args);
-		va_end(args);
-		if( chars_written < 0 ) {
-			LOG_WARN("Error encoding format string %s",format);
+	if (display_enabled)
+	{
+		struct display_data *display = displayGetData();
+		if( row >= DISPLAY_ROW_MAX ) {
+			LOG_WARN("Row %d exceeded max row, ignoring write request",row);
+		} else {
+			va_list args;
+			va_start (args, format);
+			int chars_written = vsnprintf(&display->row_data[row][0],DISPLAY_ROW_LEN,format,args);
+			va_end(args);
+			if( chars_written < 0 ) {
+				LOG_WARN("Error encoding format string %s",format);
+			}
+			if( chars_written >= DISPLAY_ROW_LEN ) {
+				LOG_WARN("Exceeded row buffer length for row %d with format string %s",row,format);
+				chars_written = DISPLAY_ROW_LEN -1;
+			}
+			/**
+			 * Ensure null terminator
+			 */
+			display->row_data[row][chars_written] = 0;
+			LOG_DEBUG("Updating display row %d with content \"%s\"",row,&display->row_data[row][0]);
 		}
-		if( chars_written >= DISPLAY_ROW_LEN ) {
-			LOG_WARN("Exceeded row buffer length for row %d with format string %s",row,format);
-			chars_written = DISPLAY_ROW_LEN -1;
-		}
-		/**
-		 * Ensure null terminator
-		 */
-		display->row_data[row][chars_written] = 0;
-		LOG_DEBUG("Updating display row %d with content \"%s\"",row,&display->row_data[row][0]);
-	}
 
-	displayUpdateWriteBuffer(display);
+		displayUpdateWriteBuffer(display);
+	}
 }
 
 

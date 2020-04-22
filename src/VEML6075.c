@@ -180,6 +180,7 @@ bool veml6075_begin(veml6075_integrationtime_t itime, bool highDynamic,
 static void veml6075_unexpected_error(void)
 {
 	veml6075_powerOff();
+	i2c_deInit();
 	current_state = veml6075_power_off;
 }
 
@@ -197,6 +198,7 @@ void veml6075_run(void)
 				events_clear_event(EVENT_TIMER_PERIOD_EXPIRED);
 
 				veml6075_powerOn();
+				i2c_init();
 
 				// start a timer to wait for the Si7021 to fully power up
 				timer_start_ms_timer(POWER_ON_TIME_MS);
@@ -404,6 +406,7 @@ void veml6075_run(void)
 				if (status == i2cTransferDone) // if the transfer completed successfully
 				{
 					veml6075_powerOff();
+					i2c_deInit();
 
 					// combine the read bytes into an unsigned 16 bit value. Then cast this to a signed int, and finally to a float
 					uv_comp2 = (float)(int16_t)((uint16_t)read_buf[0] + ((uint16_t)read_buf[1] << 8));

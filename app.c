@@ -50,9 +50,13 @@
 #include "gecko_ble_errors.h"
 #include "timer.h"
 #include "VEML6075.h"
+#include "i2c.h"
 
 #define SOFT_TIMER_1_SEC (32768)
 #define FACTORY_RESET_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
+#define INIT_LPN_TIMEOUT (SOFT_TIMER_1_SEC * 30) // 30 seconds
+#define RESET_TIMER_ID (0)
+#define LPN_TIMER_ID (1)
 
 #define NAME_LENGTH (13)
 #if DEVICE_IS_ONOFF_PUBLISHER
@@ -432,6 +436,83 @@ static void onoff_recall(uint16_t model_id,
 	onoff_update_and_publish(element_index, transition_ms);
 }
 
+uint8_t lpn_active = 0;
+uint8_t num_connections = 0;
+
+/***************************************************************************//**
+ * Initialize LPN functionality with configuration and friendship establishment.
+ ******************************************************************************/
+void lpn_init(void)
+{
+	uint16_t result;
+
+	// Do not initialize LPN if lpn is currently active
+	// or any GATT connection is opened
+	if (lpn_active || num_connections) {
+		return;
+	}
+
+	// Initialize LPN functionality.
+	result = gecko_cmd_mesh_lpn_init()->result;
+	if (result) {
+		LOG_ERROR("LPN init failed (0x%x)\r\n", result);
+		return;
+	}
+	lpn_active = 1;
+	LOG_INFO("LPN initialized\r\n");
+	//DI_Print("LPN on", DI_ROW_LPN);
+
+	// Configure LPN Minimum friend queue length = 2
+	result = gecko_cmd_mesh_lpn_config(mesh_lpn_queue_length, 2)->result;
+	if (result) {
+		LOG_ERROR("LPN queue configuration failed (0x%x)\r\n", result);
+		return;
+	}
+	// Configure LPN Poll timeout = 5 seconds
+	result = gecko_cmd_mesh_lpn_config(mesh_lpn_poll_timeout, 5 * 1000)->result;
+	if (result) {
+		LOG_ERROR("LPN Poll timeout configuration failed (0x%x)\r\n", result);
+		return;
+	}
+	LOG_INFO("trying to find friend...\r\n");
+	result = gecko_cmd_mesh_lpn_establish_friendship(0)->result;
+
+	if (result != 0) {
+		LOG_WARN("ret.code 0x%x\r\n", result);
+	}
+}
+
+/***************************************************************************//**
+ * Deinitialize LPN functionality.
+ ******************************************************************************/
+void lpn_deinit(void)
+{
+  uint16_t result;
+
+  if (!lpn_active) {
+    return; // lpn feature is currently inactive
+  }
+
+  // Cancel friend finding timer
+//  result = gecko_cmd_hardware_set_soft_timer(TIMER_STOP,
+//                                             TIMER_ID_FRIEND_FIND,
+//                                             1)->result;
+
+  // Terminate friendship if exist
+  result = gecko_cmd_mesh_lpn_terminate_friendship()->result;
+  if (result) {
+    LOG_ERROR("Friendship termination failed (0x%x)\r\n", result);
+  }
+  // turn off lpn feature
+  result = gecko_cmd_mesh_lpn_deinit()->result;
+  if (result) {
+    LOG_ERROR("LPN deinit failed (0x%x)\r\n", result);
+  }
+  lpn_active = 0;
+  LOG_INFO("LPN deinitialized\r\n");
+  //DI_Print("LPN off", DI_ROW_LPN);
+}
+
 /*******************************************************************************
  * Handling of stack events. Both Bluetooth LE and Bluetooth mesh events
  * are handled here.
@@ -466,7 +547,7 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		timer_initialize();
 		i2c_init();
 		veml6075_init();
-		//veml6075_begin(VEML6075_100MS, false, true);
+		veml6075_begin(VEML6075_100MS, false, true);
 		veml6075_enable(true);
 
 		// check if a button is pressed. If so, do a factory reset!
@@ -514,19 +595,37 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
 	case gecko_evt_hardware_soft_timer_id:
 		LOG_DEBUG("Timer %d event", evt->data.evt_hardware_soft_timer.handle);
-		// reset!
-		gecko_cmd_system_reset(0);
+
+		if (evt->data.evt_hardware_soft_timer.handle == RESET_TIMER_ID)
+		{
+			// reset!
+			gecko_cmd_system_reset(0);
+		}
+		else if (evt->data.evt_hardware_soft_timer.handle == LPN_TIMER_ID)
+		{
+			if (!lpn_active) {
+				LOG_INFO("trying to initialize lpn...");
+				lpn_init();
+			}
+		}
+
 		break;
 
 	case gecko_evt_mesh_node_initialized_id:
 		if(!evt->data.evt_mesh_node_initialized.provisioned)
 		{
+			BTSTACK_CHECK_RESPONSE(
+					gecko_cmd_mesh_generic_client_init());
+			BTSTACK_CHECK_RESPONSE(
+					gecko_cmd_mesh_scene_client_init(0));
 			gecko_cmd_mesh_node_start_unprov_beaconing(0x3);   // enable ADV and GATT provisioning bearer
 		}
 		else
 		{
 			displayPrintf(DISPLAY_ROW_ACTION, "Provisioned");
 			LOG_INFO("Already provisioned");
+
+			lpn_init();
 
 			if (DeviceUsesClientModel())
 			{
@@ -574,6 +673,8 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		displayPrintf(DISPLAY_ROW_ACTION, "Provisioned");
 		LOG_INFO("Provisioned");
 
+
+
 		mesh_lib_init(malloc,free,9);
 		button_state_init();
 
@@ -585,6 +686,9 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
 		onoff_update_and_publish(_primary_elem_index, 0);
 		button_state_changed();
+
+		//lpn_init();
+		gecko_cmd_hardware_set_soft_timer(INIT_LPN_TIMEOUT, LPN_TIMER_ID, 1);
 		break;
 
 	case gecko_evt_mesh_node_provisioning_failed_id:
@@ -618,12 +722,15 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		gecko_cmd_flash_ps_erase_all();
 
 		// set a timer for 2 seconds
-		gecko_cmd_hardware_set_soft_timer(FACTORY_RESET_TIMEOUT, 0, true);
+		gecko_cmd_hardware_set_soft_timer(FACTORY_RESET_TIMEOUT, RESET_TIMER_ID, true);
 		break;
 
 	case gecko_evt_le_connection_opened_id:
 		displayPrintf(DISPLAY_ROW_CONNECTION, "Connected");
 		LOG_INFO("Connected!");
+		num_connections++;
+		// turn off lpn feature after GATT connection is opened
+		lpn_deinit();
 		break;
 
 	case gecko_evt_le_connection_closed_id:
@@ -636,6 +743,14 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		{
 			displayPrintf(DISPLAY_ROW_CONNECTION, "");
 			LOG_INFO("Disconnected!");
+			if (num_connections > 0)
+			{
+				num_connections--;
+				if (num_connections == 0)
+				{
+					lpn_init();
+				}
+			}
 		}
 		break;
 
@@ -649,64 +764,64 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			events_clear_event(EVENT_PB0_PRESS);
 			LOG_DEBUG("Button pressed");
 
-//			if (DeviceIsOnOffPublisher())
-//			{
-//				struct mesh_generic_request req;
-//				const uint32_t transtime = 0; // using zero transition time by default
-//
-//				req.kind = mesh_generic_request_on_off;
-//				req.on_off = MESH_GENERIC_ON_OFF_STATE_ON;
-//
-//
-//				LOG_DEBUG("Publishing button state (on)");
-//				errorcode_t err = mesh_lib_generic_client_publish(
-//						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
-//						_primary_elem_index,
-//						onoff_trid,
-//						&req,
-//						transtime, // transition time in ms
-//						50,
-//						0x00   // flags
-//				);
-//				if (err)
-//				{
-//					LOG_WARN("client publish failed with 0x%X", err);
-//				}
-//
-//				onoff_trid++;
-//			}
+			//			if (DeviceIsOnOffPublisher())
+			//			{
+			//				struct mesh_generic_request req;
+			//				const uint32_t transtime = 0; // using zero transition time by default
+			//
+			//				req.kind = mesh_generic_request_on_off;
+			//				req.on_off = MESH_GENERIC_ON_OFF_STATE_ON;
+			//
+			//
+			//				LOG_DEBUG("Publishing button state (on)");
+			//				errorcode_t err = mesh_lib_generic_client_publish(
+			//						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
+			//						_primary_elem_index,
+			//						onoff_trid,
+			//						&req,
+			//						transtime, // transition time in ms
+			//						50,
+			//						0x00   // flags
+			//				);
+			//				if (err)
+			//				{
+			//					LOG_WARN("client publish failed with 0x%X", err);
+			//				}
+			//
+			//				onoff_trid++;
+			//			}
 		}
 		if (events_get_event(EVENT_PB0_RELEASE))
 		{
 			events_clear_event(EVENT_PB0_RELEASE);
 			LOG_DEBUG("Button released");
 
-//			if (DeviceIsOnOffPublisher())
-//			{
-//				struct mesh_generic_request req;
-//				const uint32_t transtime = 0; // using zero transition time by default
-//
-//				req.kind = mesh_generic_request_on_off;
-//				req.on_off = MESH_GENERIC_ON_OFF_STATE_OFF;
-//
-//
-//				LOG_DEBUG("Publishing button state (off)");
-//				errorcode_t err = mesh_lib_generic_client_publish(
-//						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
-//						_primary_elem_index,
-//						onoff_trid,
-//						&req,
-//						transtime, // transition time in ms
-//						50,
-//						0x00   // flags
-//				);
-//				if (err)
-//				{
-//					LOG_WARN("client publish failed with 0x%X", err);
-//				}
-//
-//				onoff_trid++;
-//			}
+			//			if (DeviceIsOnOffPublisher())
+			//			{
+			//				struct mesh_generic_request req;
+			//				const uint32_t transtime = 0; // using zero transition time by default
+			//
+			//				req.kind = mesh_generic_request_on_off;
+			//				req.on_off = MESH_GENERIC_ON_OFF_STATE_OFF;
+			//
+			//
+			//				LOG_DEBUG("Publishing button state (off)");
+			//				errorcode_t err = mesh_lib_generic_client_publish(
+			//						MESH_GENERIC_ON_OFF_CLIENT_MODEL_ID,
+			//						_primary_elem_index,
+			//						onoff_trid,
+			//						&req,
+			//						transtime, // transition time in ms
+			//						50,
+			//						0x00   // flags
+			//				);
+			//				if (err)
+			//				{
+			//					LOG_WARN("client publish failed with 0x%X", err);
+			//				}
+			//
+			//				onoff_trid++;
+			//			}
 			if (!displayEnabled())
 			{
 				displayInit();
