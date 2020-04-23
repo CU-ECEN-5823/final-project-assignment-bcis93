@@ -81,7 +81,12 @@ uint16_t _read_delay;
 
 // coefficients
 static float _uva_a, _uva_b, _uvb_c, _uvb_d, _uva_resp, _uvb_resp;
+
+// values read from sensor
 static float uva, uvb, uv_comp1, uv_comp2;
+
+// calculated UV index
+static float uvi_calc;
 
 static veml6075_commandRegister _commandRegister;
 
@@ -355,7 +360,7 @@ void veml6075_run(void)
 					// Equasion 1 & 2 in App note, without 'golden sample' calibration
 					float uva_calc = uva - (_uva_a * uv_comp1) - (_uva_b * uv_comp2);
 					float uvb_calc = uvb - (_uvb_c * uv_comp1) - (_uvb_d * uv_comp2);
-					float uvi_calc = ((uva_calc * _uva_resp) + (uvb_calc * _uvb_resp)) / 2;
+					uvi_calc = ((uva_calc * _uva_resp) + (uvb_calc * _uvb_resp)) / 2;
 
 					LOG_INFO("UVA: %f", uva_calc);
 					LOG_INFO("UVB: %f", uvb_calc);
@@ -502,4 +507,9 @@ static void veml6075_setForcedMode(bool flag) {
 /**************************************************************************/
 static void veml6075_shutdown(bool sd) {
 	_commandRegister.bit.SD = sd;
+}
+
+float veml6075_get_last_uvi(void)
+{
+	return uvi_calc;
 }

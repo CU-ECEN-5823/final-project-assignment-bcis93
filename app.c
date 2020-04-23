@@ -56,9 +56,13 @@
 #define FACTORY_RESET_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
 #define INIT_LPN_TIMEOUT (SOFT_TIMER_1_SEC * 30) // 30 seconds
 #define RETRY_FRIENDSHIP_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
+#define DEFAULT_PUBLISH_TIMEOUT (SOFT_TIMER_1_SEC * 10) // 10 seconds
+
 #define RESET_TIMER_ID (0)
 #define LPN_TIMER_ID (1)
 #define FRIEND_FIND_TIMER_ID (2)
+#define PUBLISH_TIMER_ID (3)
+
 #define UV_CONFIGURATION_KEY (0x4008)
 #define DEFAULT_MEASUREMENT_INTERVAL_S (1)
 #define DEFAULT_UV_THRESHOLD (4)
@@ -86,6 +90,8 @@ static uint16_t _primary_elem_index = 0; /* For indexing elements of the node */
 static uint8_t onoff_trid = 0;
 
 static uint8_t display_count = 0;
+
+static uint32_t publish_timeout = DEFAULT_PUBLISH_TIMEOUT;
 
 /***********************************************************************************************//**
  * @addtogroup Application
@@ -460,6 +466,34 @@ static void onoff_recall(uint16_t model_id,
 	onoff_update_and_publish(element_index, transition_ms);
 }
 
+void publish_uvi(float uvi)
+{
+	static uint8_t uvi_trid;
+	struct mesh_generic_request req;
+	const uint32_t transtime = 0; // using zero transition time by default
+
+	req.kind = mesh_lighting_request_lightness_actual;
+	req.lightness = (uint16_t) uvi;
+
+
+	LOG_DEBUG("Publishing UVI: %f", uvi);
+	errorcode_t err = mesh_lib_generic_client_publish(
+			MESH_GENERIC_LEVEL_CLIENT_MODEL_ID,
+			_primary_elem_index,
+			uvi_trid,
+			&req,
+			transtime, // transition time in ms
+			50,
+			0x00   // flags
+	);
+	if (err)
+	{
+		LOG_WARN("client publish failed with 0x%X", err);
+	}
+
+	uvi_trid++;
+}
+
 uint8_t lpn_active = 0;
 uint8_t num_connections = 0;
 
@@ -570,6 +604,7 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		i2c_init();
 		veml6075_init();
 		veml6075_enable(true);
+		gecko_cmd_hardware_set_soft_timer(publish_timeout, PUBLISH_TIMER_ID, false);
 
 		// check if a button is pressed. If so, do a factory reset!
 		if (button_get_pushbutton_state(PB0) || button_get_pushbutton_state(PB1))
@@ -631,9 +666,14 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		}
 		else if (evt->data.evt_hardware_soft_timer.handle == FRIEND_FIND_TIMER_ID)
 		{
-			LOG_INFO("trying to find friend...\r\n");
+			LOG_INFO("trying to find friend...");
 			BTSTACK_CHECK_RESPONSE(
 					gecko_cmd_mesh_lpn_establish_friendship(0));
+		}
+		else if (evt->data.evt_hardware_soft_timer.handle == PUBLISH_TIMER_ID)
+		{
+			LOG_INFO("Publishing UV light data");
+
 		}
 
 		break;

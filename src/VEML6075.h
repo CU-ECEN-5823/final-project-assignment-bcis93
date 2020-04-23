@@ -94,4 +94,6 @@ void veml6075_run(void);
  */
 void veml6075_enable(bool enable);
 
+float veml6075_get_last_uvi(void);
+
 #endif /* SRC_VEML6075_H_ */
