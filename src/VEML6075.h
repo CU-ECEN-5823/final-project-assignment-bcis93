@@ -82,10 +82,6 @@ typedef union {
 
 void veml6075_init();
 
-bool veml6075_begin(veml6075_integrationtime_t itime,
-		bool highDynamic, bool forcedReads); //,
-//TwoWire *theWire);
-
 /**
  * Runs the VEML6075's state machine
  */
@@ -97,24 +93,5 @@ void veml6075_run(void);
  * measurement
  */
 void veml6075_enable(bool enable);
-
-void veml6075_shutdown(bool sd);
-
-void veml6075_setIntegrationTime(veml6075_integrationtime_t itime);
-veml6075_integrationtime_t veml6075_getIntegrationTime(void);
-void veml6075_setHighDynamic(bool hd);
-bool veml6075_getHighDynamic(void);
-void veml6075_setForcedMode(bool flag);
-bool veml6075_getForcedMode(void);
-
-void veml6075_setCoefficients(float UVA_A, float UVA_B, float UVA_C, float UVA_D,
-		float UVA_response, float UVB_response);
-
-float veml6075_readUVA(void);
-float veml6075_readUVB(void);
-float veml6075_readUVI(void);
-
-//Adafruit_I2CRegister *Config_Register;  ///< Chip config register
-
 
 #endif /* SRC_VEML6075_H_ */
