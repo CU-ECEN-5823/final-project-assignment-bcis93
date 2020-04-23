@@ -55,8 +55,13 @@
 #define SOFT_TIMER_1_SEC (32768)
 #define FACTORY_RESET_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
 #define INIT_LPN_TIMEOUT (SOFT_TIMER_1_SEC * 30) // 30 seconds
+#define RETRY_FRIENDSHIP_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
 #define RESET_TIMER_ID (0)
 #define LPN_TIMER_ID (1)
+#define FRIEND_FIND_TIMER_ID (2)
+#define UV_CONFIGURATION_KEY (0x4008)
+#define DEFAULT_MEASUREMENT_INTERVAL_S (1)
+#define DEFAULT_UV_THRESHOLD (4)
 
 #define NAME_LENGTH (13)
 #if DEVICE_IS_ONOFF_PUBLISHER
@@ -156,6 +161,25 @@ void gecko_bgapi_classes_init_client_lpn(void)
 	gecko_bgapi_class_mesh_lpn_init();
 	//gecko_bgapi_class_mesh_friend_init();
 	gecko_bgapi_class_mesh_scene_client_init();
+}
+
+static PACKSTRUCT(struct uv_configuration {
+	uint8_t uv_threshold; // threshold level to alert at
+	uint8_t measurement_interval_s; // how often to take a measurement, in seconds
+}) uv_configuration;
+
+static int uv_configuration_store(void)
+{
+	struct gecko_msg_flash_ps_save_rsp_t* pSave;
+
+	pSave = gecko_cmd_flash_ps_save(UV_CONFIGURATION_KEY, sizeof(struct uv_configuration), (const uint8_t*)&uv_configuration);
+
+	if (pSave->result) {
+		LOG_WARN("PS save failed, code %x", pSave->result);
+		return(-1);
+	}
+
+	return 0;
 }
 
 /// button state
@@ -494,9 +518,7 @@ void lpn_deinit(void)
   }
 
   // Cancel friend finding timer
-//  result = gecko_cmd_hardware_set_soft_timer(TIMER_STOP,
-//                                             TIMER_ID_FRIEND_FIND,
-//                                             1)->result;
+  gecko_cmd_hardware_set_soft_timer(0, FRIEND_FIND_TIMER_ID, 1);
 
   // Terminate friendship if exist
   result = gecko_cmd_mesh_lpn_terminate_friendship()->result;
@@ -547,7 +569,6 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		timer_initialize();
 		i2c_init();
 		veml6075_init();
-		veml6075_begin(VEML6075_100MS, false, true);
 		veml6075_enable(true);
 
 		// check if a button is pressed. If so, do a factory reset!
@@ -608,6 +629,12 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 				lpn_init();
 			}
 		}
+		else if (evt->data.evt_hardware_soft_timer.handle == FRIEND_FIND_TIMER_ID)
+		{
+			LOG_INFO("trying to find friend...\r\n");
+			BTSTACK_CHECK_RESPONSE(
+					gecko_cmd_mesh_lpn_establish_friendship(0));
+		}
 
 		break;
 
@@ -626,6 +653,19 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			LOG_INFO("Already provisioned");
 
 			lpn_init();
+
+			struct gecko_msg_flash_ps_load_rsp_t* rsp = gecko_cmd_flash_ps_load(UV_CONFIGURATION_KEY);
+			if (rsp->result)
+			{
+				LOG_WARN("PS load failed with code 0x%X", rsp->result);
+				uv_configuration.measurement_interval_s = DEFAULT_MEASUREMENT_INTERVAL_S;
+				uv_configuration.uv_threshold = DEFAULT_UV_THRESHOLD;
+			}
+			else
+			{
+				LOG_DEBUG("PS load successful");
+				memcpy(&uv_configuration, rsp->value.data, sizeof(struct uv_configuration));
+			}
 
 			if (DeviceUsesClientModel())
 			{
@@ -867,6 +907,26 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		}
 		break;
 
+	case gecko_evt_mesh_lpn_friendship_established_id:
+		LOG_INFO("friendship established");
+//		DI_Print("LPN with friend", DI_ROW_LPN);
+		break;
+
+	case gecko_evt_mesh_lpn_friendship_failed_id:
+		LOG_INFO("friendship failed");
+//		DI_Print("no friend", DI_ROW_LPN);
+		// try again in a few seconds
+		gecko_cmd_hardware_set_soft_timer(RETRY_FRIENDSHIP_TIMEOUT, FRIEND_FIND_TIMER_ID, 1);
+		break;
+
+	case gecko_evt_mesh_lpn_friendship_terminated_id:
+		printf("friendship terminated\r\n");
+//		DI_Print("friend lost", DI_ROW_LPN);
+		if (num_connections == 0) {
+			// try again in a few seconds
+			gecko_cmd_hardware_set_soft_timer(RETRY_FRIENDSHIP_TIMEOUT, FRIEND_FIND_TIMER_ID, 1);
+		}
+		break;
 	}
 }
 
