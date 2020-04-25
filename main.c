@@ -106,6 +106,7 @@ const gecko_configuration_t config =
   .max_timers = 16,
   .rf.flags = GECKO_RF_CONFIG_ANTENNA,   // Enable antenna configuration.
   .rf.antenna = GECKO_RF_ANTENNA,   // Select antenna path!
+  .sleep.flags = SLEEP_FLAGS_DEEP_SLEEP_ENABLE,
 };
 
 

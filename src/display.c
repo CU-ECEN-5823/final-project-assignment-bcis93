@@ -215,6 +215,9 @@ void displayInit()
 
 void displayDeinit(void)
 {
+	for(enum display_row row = DISPLAY_ROW_NAME; row < DISPLAY_ROW_MAX; row++ ) {
+		displayPrintf(row,"%s"," ");
+	}
 	gpioDisableDisplay();
 	display_enabled = false;
 }

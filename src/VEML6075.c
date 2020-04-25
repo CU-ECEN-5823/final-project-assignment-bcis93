@@ -362,8 +362,8 @@ void veml6075_run(void)
 					float uvb_calc = uvb - (_uvb_c * uv_comp1) - (_uvb_d * uv_comp2);
 					uvi_calc = ((uva_calc * _uva_resp) + (uvb_calc * _uvb_resp)) / 2;
 
-					LOG_INFO("UVA: %f", uva_calc);
-					LOG_INFO("UVB: %f", uvb_calc);
+					LOG_DEBUG("UVA: %f", uva_calc);
+					LOG_DEBUG("UVB: %f", uvb_calc);
 					LOG_INFO("UVI: %f", uvi_calc);
 
 					if (displayEnabled())
@@ -448,6 +448,8 @@ static void veml6075_setCoefficients(float UVA_A, float UVA_B, float UVB_C, floa
 	_uva_b = UVA_B;
 	_uvb_c = UVB_C;
 	_uvb_d = UVB_D;
+	_uva_resp = UVA_response;
+	_uvb_resp = UVB_response;
 }
 
 
