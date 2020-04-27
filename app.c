@@ -65,10 +65,18 @@
 
 #define UV_CONFIGURATION_KEY (0x4008)
 #define DEFAULT_MEASUREMENT_INTERVAL_S (1)
-#define DEFAULT_UV_THRESHOLD (4)
+#define DEFAULT_UV_ALERT_THRESHOLD (5)
+#define DEFAULT_UV_CLEAR_THRESHOLD (4)
 
 #define PUBLISH_LEVEL 0
 #define PUBLISH_ON_OFF 1
+
+#define USE_TEST_VALUES (1) // set this to use very low thresholds (for testing indoors)
+#define TEST_UV_ALERT_THRESHOLD (0.2)
+#define TEST_UV_CLEAR_THRESHOLD (0.1)
+
+#define ALERT (0xFFFF)
+#define CLEAR_ALERT (0x7FFF)
 
 #define NAME_LENGTH (13)
 #if DEVICE_IS_ONOFF_PUBLISHER
@@ -173,7 +181,8 @@ void gecko_bgapi_classes_init_client_lpn(void)
 }
 
 static PACKSTRUCT(struct uv_configuration {
-	uint8_t uv_threshold; // threshold level to alert at
+	uint8_t uv_alert_threshold; // threshold level to alert at
+	uint8_t uv_clear_threshold; // threshold level to clear alert
 	uint8_t measurement_interval_s; // how often to take a measurement, in seconds
 }) uv_configuration;
 
@@ -199,9 +208,54 @@ void publish_uvi(float uvi)
 
 	LOG_DEBUG("Publishing UVI: %f", uvi);
 
+	float uv_alert_level = uv_configuration.uv_alert_threshold;
+	float uv_clear_level = uv_configuration.uv_clear_threshold;
+#if USE_TEST_VALUES
+	uv_alert_level = TEST_UV_ALERT_THRESHOLD;
+	uv_clear_level = TEST_UV_CLEAR_THRESHOLD;
+#endif // USE_TEST_VALUES
+
 #if PUBLISH_LEVEL
+	static bool alert = false;
+	static bool second_alert_sent = false;
+	static bool second_cleared_sent = false;
+
 	req.kind = mesh_generic_request_level;
 	req.level = (int16_t) (uvi * 1000); // we will report in mili-units
+
+	if (uvi > uv_alert_level)
+	{
+		LOG_WARN("Alert! UVI at %f", uvi);
+		if (!alert)
+		{
+			alert = true;
+			second_cleared_sent = false;
+			req.level = ALERT;
+			LOG_INFO("Sending alert");
+		}
+		else if (!second_alert_sent)
+		{
+			second_alert_sent = true;
+			req.level = ALERT;
+			LOG_INFO("Sending alert");
+		}
+	}
+	else if (uvi < uv_clear_level)
+	{
+		if (alert)
+		{
+			alert = false;
+			second_alert_sent = false;
+			req.level = CLEAR_ALERT;
+			LOG_INFO("Clearing alert");
+		}
+		else if (!second_cleared_sent)
+		{
+			second_cleared_sent = true;
+			req.level = CLEAR_ALERT;
+			LOG_INFO("Clearing alert");
+		}
+	}
 
 
 	errorcode_t err = mesh_lib_generic_client_publish(
@@ -217,7 +271,7 @@ void publish_uvi(float uvi)
 #if PUBLISH_ON_OFF
 	req.kind = mesh_generic_request_on_off;
 
-	if (uvi > 0.1)
+	if (uvi > uv_alert_level)
 	{
 		req.on_off = MESH_GENERIC_ON_OFF_STATE_ON;
 	}
@@ -480,7 +534,8 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			{
 				LOG_WARN("PS load failed with code 0x%X", rsp->result);
 				uv_configuration.measurement_interval_s = DEFAULT_MEASUREMENT_INTERVAL_S;
-				uv_configuration.uv_threshold = DEFAULT_UV_THRESHOLD;
+				uv_configuration.uv_alert_threshold = DEFAULT_UV_ALERT_THRESHOLD;
+				uv_configuration.uv_clear_threshold = DEFAULT_UV_CLEAR_THRESHOLD;
 			}
 			else
 			{
@@ -512,7 +567,8 @@ void handle_ecen5823_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		gecko_cmd_hardware_set_soft_timer(publish_timeout, PUBLISH_TIMER_ID, false);
 
 		uv_configuration.measurement_interval_s = DEFAULT_MEASUREMENT_INTERVAL_S;
-		uv_configuration.uv_threshold = DEFAULT_UV_THRESHOLD;
+		uv_configuration.uv_alert_threshold = DEFAULT_UV_ALERT_THRESHOLD;
+		uv_configuration.uv_clear_threshold = DEFAULT_UV_CLEAR_THRESHOLD;
 		uv_configuration_store();
 		break;
 
