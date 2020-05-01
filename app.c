@@ -56,7 +56,7 @@
 #define FACTORY_RESET_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
 #define INIT_LPN_TIMEOUT (SOFT_TIMER_1_SEC * 30) // 30 seconds
 #define RETRY_FRIENDSHIP_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
-#define DEFAULT_PUBLISH_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 10 seconds
+#define DEFAULT_PUBLISH_TIMEOUT (SOFT_TIMER_1_SEC * 2) // 2 seconds
 
 #define RESET_TIMER_ID (0)
 #define LPN_TIMER_ID (1)
@@ -65,13 +65,15 @@
 
 #define UV_CONFIGURATION_KEY (0x4008)
 #define DEFAULT_MEASUREMENT_INTERVAL_S (1)
-#define DEFAULT_UV_ALERT_THRESHOLD (5)
-#define DEFAULT_UV_CLEAR_THRESHOLD (4)
+#define DEFAULT_UV_ALERT_THRESHOLD (60) // 60% of max uv
+#define DEFAULT_UV_CLEAR_THRESHOLD (40) // 40% of max uv
 
-#define PUBLISH_LEVEL 0
-#define PUBLISH_ON_OFF 1
+#define MAX_UV (11)
 
-#define USE_TEST_VALUES (1) // set this to use very low thresholds (for testing indoors)
+#define PUBLISH_LEVEL 1
+#define PUBLISH_ON_OFF 0
+
+#define USE_TEST_VALUES (0) // set this to use very low thresholds (for testing indoors)
 #define TEST_UV_ALERT_THRESHOLD (0.2)
 #define TEST_UV_CLEAR_THRESHOLD (0.1)
 
@@ -221,7 +223,7 @@ void publish_uvi(float uvi)
 	static bool second_cleared_sent = false;
 
 	req.kind = mesh_generic_request_level;
-	req.level = (int16_t) (uvi * 1000); // we will report in mili-units
+	req.level = (int16_t) (uvi * 100 / MAX_UV); // we will report in percent of MAX_UV
 
 	if (uvi > uv_alert_level)
 	{
